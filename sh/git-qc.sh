@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 
 ARG_OPTS=pf
-LONGOPTS=push,force
+LONGOPTS=push,force,help
 
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 eval set -- "$PARSED"
 
+help=n
 force=n
 push=n
 
@@ -19,6 +20,10 @@ while true; do
 	    push=y
 	    shift
 	    ;;
+  --help)
+      help=y
+      shift
+      ;;
 	--)
 	    shift
 	    break
@@ -28,6 +33,15 @@ while true; do
 	    ;;
     esac
 done
+
+if [ "$help" = "y" ]; then
+  echo "Usage: git qc <message> [--help | --push [--force]]
+Options:
+-h --help      Shows this help message
+-p --push      In addition, pushes to the remote
+-f --force     If the --push flag is set, also force pushes to remote"
+  exit 0
+fi
 
 COMMIT_OUTPUT=$((git add .) 2>&1)
 if [[ "$COMMIT_OUTPUT" =~ "fatal:" ]]; then
