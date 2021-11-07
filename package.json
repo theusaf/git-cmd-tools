@@ -2,9 +2,10 @@
   "name": "git-cmd-tools",
   "version": "1.0.0",
   "description": "git command line tools",
-  "main": " ",
+  "main": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node scripts/build.js"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,9 @@
   "homepage": "https://github.com/theusaf/git-cmd-tools#readme",
   "dependencies": {
     "yargs": "^17.2.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.2.0",
+    "pkg": "^5.4.1"
   }
 }

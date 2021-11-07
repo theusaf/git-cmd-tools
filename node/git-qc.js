@@ -1,22 +1,26 @@
-const readline = require("readline"),
-  {spawn} = require("child_process"),
+const {spawn} = require("child_process"),
   yargs = require("yargs/yargs"),
   {hideBin} = require("yargs/helpers"),
-  {argv:args} = yargs(hideBin(process.argv))
+  fs = require("fs"),
+  path = require("path"),
+  {argv} = yargs(hideBin(process.argv))
+    .usage("git qc <commit message> [--push [--force]]")
     .options({
       force: {
         alias: "f",
-        type: "boolean"
+        type: "boolean",
+        describe: "If the --push flag is set, also force pushes to remote"
       },
       push: {
         alias: "p",
-        type: "boolean"
+        type: "boolean",
+        describe: "In addition, pushes to the remote"
       }
     }),
   cwd = process.cwd();
 
 function asyncRunCommand(cmd, args, opts = {}) {
-  const command = spawn(cmd, args, {stdio: "inherit"});
+  const command = spawn(cmd, args, opts);
   return new Promise((resolve, reject) => {
     let result = "";
     if (command.stdout && command.stderr) {
@@ -50,17 +54,41 @@ function asyncRunCommand(cmd, args, opts = {}) {
 
 (async () => {
   const defaultBranch = await asyncRunCommand("git", ["config", "--get", "init.defaultBranch"]),
-    currentBranch = await asyncRunCommand("git" ["for-each-ref", "--format='%(upstream:short)'", '"$(git symbolic-ref -q HEAD)"']),
-    remoteCheck = await asyncRunCommand("git", ["ls-remote"], {
-    setup: (child) => {child.stdin.write("\n");}
-  }).search(/^fatal:/) === -1,
-    [commitMessage] = argv._;
+    currentRef = await asyncRunCommand("git", ["symbolic-ref", "-q", "HEAD"]),
+    currentBranch = await asyncRunCommand("git", ["for-each-ref", "--format=%(upstream:short)", currentRef]),
+    remoteCheck = (await asyncRunCommand("git", ["ls-remote"], {
+      setup: (child) => {
+        if (child.stdin) {
+          child.stdin.write("\n");
+        } else {
+          process.stdin.write("\n");
+        }
+      }
+    })).search(/^fatal:/) === -1,
+    commitMessage = argv._[0] ?? "";
   let localRepoExists = true;
   try{fs.statSync(path.join(cwd, "/.git"));}catch(e){localRepoExists = false;}
   if (!localRepoExists) {
     await asyncRunCommand("git", ["init"]);
   }
-  if (args.push && remoteCheck) {
-    const args = 
+  await asyncRunCommand("git", ["add", "."]);
+  const commitFailure = /^(Aborting|nothing to commit)/m.test(await asyncRunCommand("git", ["commit", "-m", commitMessage], {stdio: "inherit"}));
+  if (commitFailure) {
+    process.exit(1);
+    return;
+  }
+  if (argv.push && remoteCheck) {
+    const [origin, branch] = currentBranch.split("/"),
+      args = ["push"];
+    if (origin && branch) {
+      args.push(origin, branch);
+    } else {
+      args.push(
+        origin ?? "origin",
+        branch ?? defaultBranch ?? "main"
+      );
+    }
+    if (argv.force) {args.push("--force");}
+    await asyncRunCommand("git", args, {stdio: "inherit"});
   }
 })();

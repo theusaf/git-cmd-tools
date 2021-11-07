@@ -1,5 +1,4 @@
 const readline = require("readline"),
-  http = require("http"),
   https = require("https"),
   fs = require("fs"),
   path = require("path"),
@@ -123,7 +122,7 @@ function request(url, opts, body) {
       if (data === "\n") {
         child.stdin.write("\n");
       }
-    }
+    };
     await asyncRunCommand("git", [`credential-${credentialHelper}`, "get"], {
       dataCallback: passwordGetter,
       setup: (child) => {child.stdin.write("protocol=https\nhost=github.com\n\n");}
