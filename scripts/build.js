@@ -1,22 +1,22 @@
-const {spawn} = require("child_process"),
+const { spawn } = require("child_process"),
   fs = require("fs/promises"),
   path = require("path"),
   args = process.argv.slice(2),
   BUILD_DIR = path.join(__dirname, "../build/"),
   BUILD_OPTS = {
     stdio: "inherit",
-    shell: true
+    shell: true,
   },
   RUN_OPTS = {
     cwd: path.join(__dirname, ".."),
     stdio: "inherit",
-    shell: true
+    shell: true,
   },
   NPM = /^win/.test(process.platform) ? "npm.cmd" : "npm",
   NPX = /^win/.test(process.platform) ? "npx.cmd" : "npx"; // damn windows!
 
 function asyncRunCommand(cmd, args, opts = {}) {
-  const command = spawn(cmd, args, {stdio: "inherit"});
+  const command = spawn(cmd, args, { stdio: "inherit" });
   return new Promise((resolve, reject) => {
     let result = "";
     if (command.stdout && command.stderr) {
@@ -50,20 +50,31 @@ function asyncRunCommand(cmd, args, opts = {}) {
 
 function pkgPlatform() {
   switch (process.platform) {
-  case "darwin":
-    return "macos";
-  case "win32":
-    return "win";
-  case "freebsd":
-    return "freebsd";
-  default:
-    return "linux";
+    case "darwin":
+      return "macos";
+    case "win32":
+      return "win";
+    case "freebsd":
+      return "freebsd";
+    default:
+      return "linux";
   }
 }
 
 const builds = {
   hub: async () => {
-    await asyncRunCommand(NPX, ["pkg", "--out-path", "build", "-t", `node16-${pkgPlatform()}-x64`, "node/git-hub.js"], BUILD_OPTS);
+    await asyncRunCommand(
+      NPX,
+      [
+        "pkg",
+        "--out-path",
+        "build",
+        "-t",
+        `node16-${pkgPlatform()}-x64`,
+        "node/git-hub.js",
+      ],
+      BUILD_OPTS
+    );
   },
   qc: async () => {
     try {
@@ -71,8 +82,19 @@ const builds = {
     } catch (e) {
       await asyncRunCommand(NPM, ["install", "yargs", "-D"], RUN_OPTS);
     }
-    await asyncRunCommand(NPX, ["pkg", "--out-path", "build", "-t", `node16-${pkgPlatform()}-x64`, "node/git-qc.js"], BUILD_OPTS);
-  }
+    await asyncRunCommand(
+      NPX,
+      [
+        "pkg",
+        "--out-path",
+        "build",
+        "-t",
+        `node16-${pkgPlatform()}-x64`,
+        "node/git-qc.js",
+      ],
+      BUILD_OPTS
+    );
+  },
 };
 
 (async () => {

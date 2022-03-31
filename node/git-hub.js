@@ -2,12 +2,12 @@ const readline = require("readline"),
   https = require("https"),
   fs = require("fs"),
   path = require("path"),
-  {spawn} = require("child_process"),
+  { spawn } = require("child_process"),
   cwd = process.cwd();
 
 const interface = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 function asyncRunCommand(cmd, args, opts = {}) {
@@ -51,7 +51,8 @@ function asyncQuestion(question, def, validator, muted) {
       if (answer === "") {
         answer = def;
       }
-      if (muted) { // unmute
+      if (muted) {
+        // unmute
         interface._writeToOutput = originalFunc;
         interface.history.slice(1);
         console.log("");
@@ -94,14 +95,14 @@ function request(url, opts, body) {
         reject({
           body: result,
           code: res.statusCode,
-          headers: res.headers
+          headers: res.headers,
         });
       });
       res.on("close", () => {
         resolve({
           body: result,
           code: res.statusCode,
-          headers: res.headers
+          headers: res.headers,
         });
       });
     });
@@ -111,8 +112,16 @@ function request(url, opts, body) {
 
 (async () => {
   let username = await asyncRunCommand("git", ["config", "--get", "user.name"]),
-    defaultBranch = await asyncRunCommand("git", ["config", "--get", "init.defaultBranch"]),
-    credentialHelper = await asyncRunCommand("git", ["config", "--get", "credential.helper"]),
+    defaultBranch = await asyncRunCommand("git", [
+      "config",
+      "--get",
+      "init.defaultBranch",
+    ]),
+    credentialHelper = await asyncRunCommand("git", [
+      "config",
+      "--get",
+      "credential.helper",
+    ]),
     password;
   if (credentialHelper !== "" && credentialHelper !== " ") {
     let tmp = "";
@@ -125,7 +134,9 @@ function request(url, opts, body) {
     };
     await asyncRunCommand("git", [`credential-${credentialHelper}`, "get"], {
       dataCallback: passwordGetter,
-      setup: (child) => {child.stdin.write("protocol=https\nhost=github.com\n\n");}
+      setup: (child) => {
+        child.stdin.write("protocol=https\nhost=github.com\n\n");
+      },
     });
     const passwordRegex = /^password=.*$/m;
     password = tmp.match(passwordRegex);
@@ -135,50 +146,78 @@ function request(url, opts, body) {
   }
   // Check if remote is already configured.
   const remoteCheck = await asyncRunCommand("git", ["ls-remote"], {
-    setup: (child) => {child.stdin.write("\n");}
+    setup: (child) => {
+      child.stdin.write("\n");
+    },
   });
-  if (remoteCheck.search(/^fatal:/) === -1) { // remotes exist
+  if (remoteCheck.search(/^fatal:/) === -1) {
+    // remotes exist
     return close("fatal: Remote repository is already configured!");
   }
   let localRepoExists = true;
-  try{fs.statSync(path.join(cwd, "/.git"));}catch(e){localRepoExists = false;}
-  const repositoryName = await asyncQuestion("repository name:", path.parse(cwd).name),
-    description = await asyncQuestion("description:") || "",
+  try {
+    fs.statSync(path.join(cwd, "/.git"));
+  } catch (e) {
+    localRepoExists = false;
+  }
+  const repositoryName = await asyncQuestion(
+      "repository name:",
+      path.parse(cwd).name
+    ),
+    description = (await asyncQuestion("description:")) || "",
     private = await asyncQuestion("make repo private?", "no", (answer) => {
       return /^((y(es)?)|(no?))$/.test(answer);
     }),
-    confirm = await asyncQuestion(`Creating a repository with the following information:
+    confirm = await asyncQuestion(
+      `Creating a repository with the following information:
 - Name:        ${repositoryName}
 - Description: ${description}
 - Private:     ${private[0] === "y" ? "yes" : "no"}
-Is this OK?`, "yes");
+Is this OK?`,
+      "yes"
+    );
   if (!/^(y(es)?)$/.test(confirm)) {
     return close("Aborted.");
   }
   if (username === "") {
-    username = await asyncQuestion("Enter your GitHub username:", null, (answer) => {
-      return /^[a-z0-9-_.]+$/i.test(answer);
-    });
+    username = await asyncQuestion(
+      "Enter your GitHub username:",
+      null,
+      (answer) => {
+        return /^[a-z0-9-_.]+$/i.test(answer);
+      }
+    );
   }
   if (!password) {
-    password = await asyncQuestion("Enter your GitHub access token:", null, null, true);
+    password = await asyncQuestion(
+      "Enter your GitHub access token:",
+      null,
+      null,
+      true
+    );
   }
   // create remote repository
-  const createdRepoInfo = await request("https://api.github.com/user/repos", {
-    method: "POST",
-    headers: {
-      Accept: "application/vnd.github.v3+json",
-      Authorization: `token ${password}`,
-      "User-Agent": "git-hub; NodeJS CLI command"
-    }
-  }, JSON.stringify({
-    name: repositoryName,
-    description: description,
-    private: private[0] === "y",
-    auto_init: false
-  }));
+  const createdRepoInfo = await request(
+    "https://api.github.com/user/repos",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        Authorization: `token ${password}`,
+        "User-Agent": "git-hub; NodeJS CLI command",
+      },
+    },
+    JSON.stringify({
+      name: repositoryName,
+      description: description,
+      private: private[0] === "y",
+      auto_init: false,
+    })
+  );
   if (createdRepoInfo.code !== 201) {
-    return close(`Failed to created repository: (${createdRepoInfo.code})\n${createdRepoInfo.body}`);
+    return close(
+      `Failed to created repository: (${createdRepoInfo.code})\n${createdRepoInfo.body}`
+    );
   }
   const parsedRepoInfo = JSON.parse(createdRepoInfo.body);
   console.log("GitHub repository successfully created!");
@@ -186,15 +225,32 @@ Is this OK?`, "yes");
   if (!localRepoExists) {
     await asyncRunCommand("git", ["init"]);
   }
-  await asyncRunCommand("git", ["remote", "add", "origin", parsedRepoInfo.clone_url]);
+  await asyncRunCommand("git", [
+    "remote",
+    "add",
+    "origin",
+    parsedRepoInfo.clone_url,
+  ]);
   await asyncRunCommand("git", ["branch", "-M", defaultBranch || "main"]);
-  const autoPush = (await asyncQuestion("Would you like to push your code now?", "yes", (answer) => {
-    return /^((y(es)?)|(no?))$/.test(answer);
-  }))[0] === "y";
+  const autoPush =
+    (
+      await asyncQuestion(
+        "Would you like to push your code now?",
+        "yes",
+        (answer) => {
+          return /^((y(es)?)|(no?))$/.test(answer);
+        }
+      )
+    )[0] === "y";
   if (autoPush) {
     await asyncRunCommand("git", ["add", "."]);
     await asyncRunCommand("git", ["commit", "-m", "Initial commit."]);
-    await asyncRunCommand("git", ["push", "-u", "origin", defaultBranch || "main"]);
+    await asyncRunCommand("git", [
+      "push",
+      "-u",
+      "origin",
+      defaultBranch || "main",
+    ]);
   }
   console.log("Done.");
   close();
