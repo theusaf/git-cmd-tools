@@ -65,10 +65,9 @@ function asyncRunCommand(cmd, args, opts = {}) {
         }
       }
     })).search(/^fatal:/) === -1,
-    commitMessage = argv._[0] ?? "";
-  let localRepoExists = true;
-  try{fs.statSync(path.join(cwd, "/.git"));}catch(e){localRepoExists = false;}
-  if (!localRepoExists) {
+    commitMessage = argv._[0] ?? "",
+    localRepoExists = await asyncRunCommand("git", ["rev-parse", "--git-dir"]);
+  if (localRepoExists.startsWith("fatal: ")) {
     await asyncRunCommand("git", ["init"]);
   }
   await asyncRunCommand("git", ["add", "."]);
@@ -79,7 +78,7 @@ function asyncRunCommand(cmd, args, opts = {}) {
   }
   if (argv.push && remoteCheck) {
     const [origin, branch] = currentBranch.split("/"),
-      args = ["push"];
+      args = ["push", "-u"];
     if (origin && branch) {
       args.push(origin, branch);
     } else {
