@@ -58,6 +58,11 @@ function asyncRunCommand(cmd, args, opts = {}) {
     ]),
     currentRef = await asyncRunCommand("git", ["symbolic-ref", "-q", "HEAD"]),
     currentBranch = await asyncRunCommand("git", [
+      "rev-parse",
+      "--abbrev-ref",
+      "HEAD",
+    ]),
+    fullBranch = await asyncRunCommand("git", [
       "for-each-ref",
       "--format=%(upstream:short)",
       currentRef,
@@ -92,12 +97,15 @@ function asyncRunCommand(cmd, args, opts = {}) {
     return;
   }
   if (argv.push && remoteCheck) {
-    const [origin, branch] = currentBranch.split("/"),
+    const [origin, branch] = fullBranch.trim().split("/"),
       args = ["push", "-u"];
     if (origin && branch) {
       args.push(origin, branch);
     } else {
-      args.push(origin ?? "origin", branch ?? defaultBranch ?? "main");
+      args.push(
+        origin || "origin",
+        branch || currentBranch || defaultBranch || "main"
+      );
     }
     if (argv.force) {
       args.push("--force");
