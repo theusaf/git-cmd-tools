@@ -243,9 +243,12 @@ Is this OK?`,
       )
     ))[0] === "y";
   if (autoPush) {
+    console.log("Committing inital changes...")
     await asyncRunCommand("git", ["add", "."]);
-    await asyncRunCommand("git", ["commit", "-m", "Initial commit."]);
+    await asyncRunCommand("git", ["commit", "-m", "Initial commit"]);
+    console.log("Setting branch...");
     await asyncRunCommand("git", ["branch", "-M", defaultBranch || "main"]);
+    console.log("Pushing...");
     await asyncRunCommand("git", [
       "push",
       "-u",
