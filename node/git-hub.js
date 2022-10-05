@@ -231,20 +231,21 @@ Is this OK?`,
     "origin",
     parsedRepoInfo.clone_url,
   ]);
-  await asyncRunCommand("git", ["branch", "-M", defaultBranch || "main"]);
+  let test;
   const autoPush =
     (
-      await asyncQuestion(
+      (await asyncQuestion(
         "Would you like to push your code now?",
         "yes",
         (answer) => {
           return /^((y(es)?)|(no?))$/.test(answer);
         }
       )
-    )[0] === "y";
+    ))[0] === "y";
   if (autoPush) {
     await asyncRunCommand("git", ["add", "."]);
     await asyncRunCommand("git", ["commit", "-m", "Initial commit."]);
+    await asyncRunCommand("git", ["branch", "-M", defaultBranch || "main"]);
     await asyncRunCommand("git", [
       "push",
       "-u",
