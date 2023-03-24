@@ -234,16 +234,16 @@ Is this OK?`,
   let test;
   const autoPush =
     (
-      (await asyncQuestion(
+      await asyncQuestion(
         "Would you like to push your code now?",
         "yes",
         (answer) => {
           return /^((y(es)?)|(no?))$/.test(answer);
         }
       )
-    ))[0] === "y";
+    )[0] === "y";
   if (autoPush) {
-    console.log("Committing inital changes...")
+    console.log("Committing inital changes...");
     await asyncRunCommand("git", ["add", "."]);
     await asyncRunCommand("git", ["commit", "-m", "Initial commit"]);
     console.log("Setting branch...");
