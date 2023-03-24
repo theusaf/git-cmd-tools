@@ -94,18 +94,17 @@ function asyncRunCommand(cmd, args, opts = {}) {
   );
   if (commitFailure) {
     process.exit(1);
-    return;
   }
   if (argv.push && remoteCheck) {
-    const [origin, branch] = fullBranch.trim().split("/"),
+    const origin = fullBranch.substring(
+        0,
+        fullBranch.length - currentBranch.length - 1
+      ),
       args = ["push", "-u"];
-    if (origin && branch) {
-      args.push(origin, branch);
+    if (origin && currentBranch) {
+      args.push(origin, currentBranch);
     } else {
-      args.push(
-        origin || "origin",
-        branch || currentBranch || defaultBranch || "main"
-      );
+      args.push(origin || "origin", currentBranch || defaultBranch || "main");
     }
     if (argv.force) {
       args.push("--force");
