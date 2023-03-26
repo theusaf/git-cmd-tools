@@ -24,15 +24,11 @@ function asyncRunCommand(cmd, args, opts = {}) {
     if (command.stdout && command.stderr) {
       command.stdout.on("data", (data) => {
         result += data.toString("utf8");
-        if (opts.dataCallback) {
-          opts.dataCallback(data, command);
-        }
+        if (opts.dataCallback) opts.dataCallback(data, command);
       });
       command.stderr.on("data", (data) => {
         result += data.toString("utf8");
-        if (opts.dataCallback) {
-          opts.dataCallback(data, command);
-        }
+        if (opts.dataCallback) opts.dataCallback(data, command);
       });
     }
     command.once("close", () => {
@@ -44,9 +40,7 @@ function asyncRunCommand(cmd, args, opts = {}) {
     command.once("error", (err) => {
       reject(err);
     });
-    if (typeof opts.setup === "function") {
-      opts.setup(command);
-    }
+    if (typeof opts.setup === "function") opts.setup(command);
   });
 }
 
@@ -67,20 +61,19 @@ function asyncRunCommand(cmd, args, opts = {}) {
       "--format=%(upstream:short)",
       currentRef,
     ]),
+    remotes = (await asyncRunCommand("git", ["remote"])).split("\n"),
     remoteCheck =
       (
         await asyncRunCommand("git", ["ls-remote"], {
           setup: (child) => {
-            if (child.stdin) {
-              child.stdin.write("\n");
-            } else {
-              process.stdin.write("\n");
-            }
+            if (child.stdin) child.stdin.write("\n");
+            else process.stdin.write("\n");
           },
         })
       ).search(/^fatal:/) === -1,
     commitMessage = argv._[0] ?? "",
     localRepoExists = await asyncRunCommand("git", ["rev-parse", "--git-dir"]);
+
   if (localRepoExists.startsWith("fatal: ")) {
     await asyncRunCommand("git", ["init"]);
   }
@@ -92,23 +85,32 @@ function asyncRunCommand(cmd, args, opts = {}) {
       stdio: "inherit",
     })
   );
-  if (commitFailure) {
-    process.exit(1);
-  }
+  if (commitFailure) process.exit(1);
+
   if (argv.push && remoteCheck) {
-    const origin = fullBranch.substring(
-        0,
-        fullBranch.length - currentBranch.length - 1
+    let origin = fullBranch.substring(
+      0,
+      fullBranch.length - currentBranch.length - 1
+    );
+    const apparentBranch = fullBranch.substring(
+        fullBranch.length - currentBranch.length
       ),
       args = ["push", "-u"];
+
+    if (apparentBranch !== currentBranch) {
+      // Guess the remote name
+      origin = remotes.find((remote) => {
+        return remote !== "" && fullBranch.startsWith(`${remote}/`);
+      });
+    }
+
     if (origin && currentBranch) {
       args.push(origin, currentBranch);
     } else {
       args.push(origin || "origin", currentBranch || defaultBranch || "main");
     }
-    if (argv.force) {
-      args.push("--force");
-    }
+    if (argv.force) args.push("--force");
+
     await asyncRunCommand("git", args, { stdio: "inherit" });
   }
 })();
